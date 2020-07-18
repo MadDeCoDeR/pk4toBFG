@@ -58,46 +58,69 @@ namespace pk4toBFG
             
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
-            if (ml.Count <= 0)
+            Task<bool> extractFileTask = extractFilesTskImpl();
+            await Task.WhenAny(extractFileTask);
+            this.Enabled = true;
+            if (extractFileTask.Result == true)
             {
-                MessageBox.Show("No pk4 files selected");
-                return;
+                MessageBox.Show("Extraction Complete!!");
             }
-            if (textBox1.Text == "")
-            {
-                MessageBox.Show("No Directory");
-                return;
-            }
-            for (int i = 0; i < ml.Count; i++) {
-                using (ZipArchive archive = ZipFile.OpenRead(ml[i].ToString()))
-                {
-                    if (i == 0)
-                    {
-                        archive.ExtractToDirectory(textBox1.Text);
-                    }
-                    else
-                    {
-                        foreach (ZipArchiveEntry file in archive.Entries)
-                        {
-                            string fullname = Path.Combine(textBox1.Text, file.FullName);
-                            if(file.Name == "" || !File.Exists(fullname))
-                            {
-                                Directory.CreateDirectory(Path.GetDirectoryName(fullname));
-                                if(file.Name != "")
-                                {
-                                    file.ExtractToFile(fullname, true);
-                                }
-                                continue;
-                            }
-                            file.ExtractToFile(fullname, true);
-                        }
-                    }
-                }
+        }
 
+        private async Task<bool> extractFilesTskImpl()
+        {
+            bool result = true;
+            await Task.Run(() =>
+            {
+                if (ml.Count <= 0)
+                {
+                    MessageBox.Show("No pk4 files selected");
+                    result = false;
+                    return;
+                }
+                if (textBox1.Text == "")
+                {
+                    MessageBox.Show("No Directory");
+                    result = false;
+                    return;
+                }
+                this.Invoke(new Action(() =>
+                {
+                    this.Enabled = false;
+                }));
+                
+                for (int i = 0; i < ml.Count; i++)
+                {
+                    using (ZipArchive archive = ZipFile.OpenRead(ml[i].ToString()))
+                    {
+                        if (i == 0)
+                        {
+                            archive.ExtractToDirectory(textBox1.Text);
                         }
-            MessageBox.Show("Extraction Complete!!");
+                        else
+                        {
+                            foreach (ZipArchiveEntry file in archive.Entries)
+                            {
+                                string fullname = Path.Combine(textBox1.Text, file.FullName);
+                                if (file.Name == "" || !File.Exists(fullname))
+                                {
+                                    Directory.CreateDirectory(Path.GetDirectoryName(fullname));
+                                    if (file.Name != "")
+                                    {
+                                        file.ExtractToFile(fullname, true);
+                                    }
+                                    continue;
+                                }
+                                file.ExtractToFile(fullname, true);
+                            }
+                        }
+                    }
+
+                }
+            });
+            return result;
         }
     }
 }
